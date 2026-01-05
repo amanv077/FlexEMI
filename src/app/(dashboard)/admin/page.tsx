@@ -2,6 +2,7 @@ import { getAdminStats } from '@/actions/admin'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Users, FileText, Wallet } from 'lucide-react'
+import { CheckLateFeesButton } from '@/components/check-late-fees-button'
 
 export default async function AdminDashboard() {
   const stats = await getAdminStats()
@@ -12,7 +13,10 @@ export default async function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight text-gray-900">Admin Dashboard</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Admin Dashboard</h1>
+        <CheckLateFeesButton />
+      </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>

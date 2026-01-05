@@ -4,6 +4,8 @@ import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { register } from '@/actions/auth'
 import Link from 'next/link'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 export default function SignupPage() {
   const [errorMessage, dispatch] = useActionState(register, undefined)
@@ -19,57 +21,46 @@ export default function SignupPage() {
         </div>
         <form action={dispatch} className="mt-8 space-y-6">
           <div className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Full Name
-              </label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="name">Full Name</Label>
+              <Input
                 id="name"
                 name="name"
                 type="text"
                 autoComplete="name"
                 required
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 placeholder="John Doe"
               />
             </div>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="email">Email address</Label>
+              <Input
                 id="email"
                 name="email"
                 type="email"
                 autoComplete="email"
                 required
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 placeholder="you@example.com"
               />
             </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
                 id="password"
                 name="password"
                 type="password"
                 autoComplete="new-password"
                 required
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 placeholder="••••••••"
               />
             </div>
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                I want to...
-              </label>
+            <div className="space-y-2">
+              <Label htmlFor="role">I want to...</Label>
               <select
                 id="role"
                 name="role"
                 required
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 bg-white"
+                className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="LOAN_TAKER">Borrow Money</option>
                 <option value="LOAN_GIVER">Lend Money</option>

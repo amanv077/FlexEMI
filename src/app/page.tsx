@@ -4,8 +4,10 @@ import { redirect } from 'next/navigation'
 
 export default async function Home() {
   const session = await auth()
+  console.log("Home page session:", session)
 
   if (session?.user) {
+    console.log("Redirecting based on role:", session.user.role)
     // Redirect based on role if possible, or just to default dashboard
     if (session.user.role === 'ADMIN') redirect('/admin')
     if (session.user.role === 'LOAN_GIVER') redirect('/lender')

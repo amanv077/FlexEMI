@@ -7,8 +7,8 @@ import { authConfig } from "./auth.config"
 // Simple schema for login
 const signInSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(6),
-})
+  password: z.string(),
+});
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
@@ -19,23 +19,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       authorize: async (credentials) => {
-        const parsedCredentials = signInSchema.safeParse(credentials)
+        console.log("Authorize called with:", credentials);
+        const parsedCredentials = signInSchema.safeParse(credentials);
 
         if (parsedCredentials.success) {
-          const { email, password } = parsedCredentials.data
+          const { email, password } = parsedCredentials.data;
           const user = await prisma.user.findUnique({
             where: { email },
-          })
+          });
 
-          if (!user) return null
-          
-          // In production, compare hashed password
-          if (password === user.password) return user
+          console.log("User found:", user ? user.email : "No user");
+
+          if (!user) return null;
+
+          if (password === user.password) {
+            console.log("Password match");
+            return user;
+          }
+          console.log("Password mismatch");
+        } else {
+          console.log("Schema validation failed");
         }
 
-        return null
+        return null;
       },
     }),
   ],
-})
+});
 

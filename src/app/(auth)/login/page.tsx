@@ -5,6 +5,9 @@ import { useFormStatus } from 'react-dom'
 import { authenticate } from '@/actions/auth'
 import Link from 'next/link'
 
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+
 export default function LoginPage() {
   const [errorMessage, dispatch] = useActionState(authenticate, undefined)
 
@@ -19,31 +22,25 @@ export default function LoginPage() {
         </div>
         <form action={dispatch} className="mt-8 space-y-6">
           <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="email">Email address</Label>
+              <Input
                 id="email"
                 name="email"
                 type="email"
                 autoComplete="email"
                 required
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 placeholder="you@example.com"
               />
             </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
                 id="password"
                 name="password"
                 type="password"
                 autoComplete="current-password"
                 required
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
                 placeholder="••••••••"
               />
             </div>

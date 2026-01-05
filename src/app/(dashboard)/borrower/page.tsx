@@ -2,6 +2,7 @@ import { getBorrowerLoans } from '@/actions/loan'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { PayEmiButton } from '@/components/pay-emi-button'
 
 export default async function BorrowerDashboard() {
   const loans = await getBorrowerLoans()
@@ -40,9 +41,7 @@ export default async function BorrowerDashboard() {
                   <p className="text-xs text-muted-foreground mb-4">
                     Loan from {emi.loan.lender.name || emi.loan.lender.email}
                   </p>
-                  <Button size="sm" className="w-full">
-                    Pay Now
-                  </Button>
+                  <PayEmiButton emiId={emi.id} amount={emi.amount} />
                 </CardContent>
               </Card>
             ))}

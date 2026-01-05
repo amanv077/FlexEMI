@@ -10,8 +10,13 @@ export async function authenticate(
   formData: FormData,
 ) {
   try {
-    await signIn('credentials', formData)
+    console.log("Attempting sign in...")
+    // Convert FormData to object to include redirectTo
+    const data = Object.fromEntries(formData)
+    await signIn('credentials', { ...data, redirectTo: '/' })
+    console.log("Sign in successful (should redirect)")
   } catch (error) {
+    console.log("Sign in error:", error)
     if (error instanceof AuthError) {
       switch (error.type) {
         case 'CredentialsSignin':
