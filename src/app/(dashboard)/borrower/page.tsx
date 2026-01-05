@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { getBorrowerLoans } from '@/actions/loan'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -58,49 +59,105 @@ export default async function BorrowerDashboard() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
-            {loans.map((loan: any) => (
-              <Card key={loan.id}>
-                <CardHeader className="bg-muted/50 pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col">
-                      <CardTitle className="text-lg">Loan from {loan.lender.name || loan.lender.email}</CardTitle>
-                      <span className="text-xs text-muted-foreground">{new Date(loan.startDate).toLocaleDateString()}</span>
-                    </div>
-                    <Badge variant={loan.status === 'ACTIVE' ? 'default' : 'secondary'}>
-                      {loan.status}
-                    </Badge>
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-green-500" />
+                  Active Loans
+                </h3>
+                {loans.filter((l: any) => !l.isArchived).length === 0 ? (
+                  <p className="text-muted-foreground text-sm pl-4">No active loans.</p>
+                ) : (
+                    <div className="grid gap-4">
+                      {loans.filter((l: any) => !l.isArchived).map((loan: any) => (
+                        <Link key={loan.id} href={`/borrower/loans/${loan.id}`} className="block group transition-transform active:scale-[0.99]">
+                          <Card className="group-hover:border-primary/50 group-hover:shadow-md transition-all duration-200">
+                            {/* ... Existing Card Content ... */}
+                            <CardHeader className="bg-muted/50 pb-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex flex-col">
+                                    <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                                      {loan.name || `Loan from ${loan.lender.name || loan.lender.email}`}
+                                    </CardTitle>
+                                    <span className="text-xs text-muted-foreground font-mono">ID: {loan.id.slice(-8).toUpperCase()}</span>
+                                  </div>
+                                  <Badge variant={loan.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                                    {loan.status}
+                                  </Badge>
+                                </div>
+                              </CardHeader>
+                              <CardContent className="pt-4">
+                                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                                  <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Total Amount</p>
+                                    <p className="font-bold">₹{loan.amount.toLocaleString()}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Interest Rate</p>
+                                    <p className="font-bold">{loan.interestRate}%</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Tenure</p>
+                                    <p className="font-bold">{loan.tenure} Months</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Progress</p>
+                                    <div className="flex items-center space-x-2">
+                                      <span className="font-bold">
+                                        {loan.emis.filter((e: any) => e.status === 'PAID').length} / {loan.tenure}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground">EMIs Paid</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </Link>
+                        ))}
                   </div>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Total Amount</p>
-                      <p className="font-bold">₹{loan.amount.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Interest Rate</p>
-                      <p className="font-bold">{loan.interestRate}%</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Tenure</p>
-                      <p className="font-bold">{loan.tenure} Months</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Progress</p>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-bold">
-                          {loan.emis.filter((e: any) => e.status === 'PAID').length} / {loan.tenure}
-                        </span>
-                        <span className="text-xs text-muted-foreground">EMIs Paid</span>
-                      </div>
-                    </div>
-                  </div>
+                )}
+              </div>
 
-                  {/* Expandable EMI details could go here */}
-                </CardContent>
-              </Card>
-            ))}
+              {/* Archived Loans Section */}
+              {loans.some((l: any) => l.isArchived) && (
+                <div className="space-y-4 pt-4 border-t">
+                  <h3 className="text-lg font-medium text-muted-foreground flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-gray-300" />
+                    Archived Loans
+                  </h3>
+                  <div className="grid gap-4 opacity-75 grayscale-[0.5] hover:grayscale-0 transition-all">
+                    {loans.filter((l: any) => l.isArchived).map((loan: any) => (
+                      <Link key={loan.id} href={`/borrower/loans/${loan.id}`} className="block group transition-transform active:scale-[0.99]">
+                        <Card className="border-dashed group-hover:border-primary/50 group-hover:border-solid transition-all duration-200">
+                          <CardHeader className="bg-muted/30 pb-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex flex-col">
+                                <CardTitle className="text-lg text-muted-foreground group-hover:text-primary transition-colors">
+                                  {loan.name || `Loan from ${loan.lender.name || loan.lender.email}`}
+                                </CardTitle>
+                                <span className="text-xs text-muted-foreground font-mono">ID: {loan.id.slice(-8).toUpperCase()}</span>
+                              </div>
+                              <Badge variant="outline">Archived</Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="pt-4">
+                            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                              <div>
+                                <p className="text-sm font-medium text-muted-foreground">Total Amount</p>
+                                <p className="font-bold">₹{loan.amount.toLocaleString()}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-muted-foreground">Status</p>
+                                <p className="font-bold">{loan.status}</p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                          </Link>
+                        ))}
+                  </div>
+                </div>
+              )}
           </div>
         )}
       </div>

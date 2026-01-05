@@ -35,16 +35,67 @@ export default function CreateLoanPage() {
         </CardHeader>
         <CardContent>
           <form action={dispatch} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="borrowerEmail">Borrower Email</Label>
-              <Input
-                id="borrowerEmail"
-                name="borrowerEmail"
-                type="email"
-                placeholder="borrower@example.com"
-                required
-              />
-              <p className="text-xs text-muted-foreground">The user must already be registered as a borrower.</p>
+            <div className="space-y-4 rounded-xl border border-border bg-gray-50/50 p-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="createBorrower" className="text-base">Create New Borrower?</Label>
+                  <p className="text-xs text-muted-foreground">Toggle if the borrower doesn't have an account yet.</p>
+                </div>
+                <input
+                  type="checkbox"
+                  id="createBorrower"
+                  name="createBorrower"
+                  className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
+                  onChange={(e) => {
+                    const passwordField = document.getElementById('borrower-password-container');
+                    if (e.target.checked) {
+                      passwordField?.classList.remove('hidden');
+                      document.getElementById('borrowerName')?.setAttribute('required', 'true');
+                      document.getElementById('borrowerPassword')?.setAttribute('required', 'true');
+                    } else {
+                      passwordField?.classList.add('hidden');
+                      document.getElementById('borrowerName')?.removeAttribute('required');
+                      document.getElementById('borrowerPassword')?.removeAttribute('required');
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="borrowerEmail">Borrower Email</Label>
+                <Input
+                  id="borrowerEmail"
+                  name="borrowerEmail"
+                  type="email"
+                  placeholder="borrower@example.com"
+                  required
+                  className="bg-white"
+                />
+              </div>
+
+              <div id="borrower-password-container" className="hidden space-y-4 animate-accordion-down">
+                <div className="space-y-2">
+                  <Label htmlFor="borrowerName">Borrower Name</Label>
+                  <Input
+                    id="borrowerName"
+                    name="borrowerName"
+                    type="text"
+                    placeholder="John Doe"
+                    className="bg-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="borrowerPassword">Borrower Password</Label>
+                  <Input
+                    id="borrowerPassword"
+                    name="borrowerPassword"
+                    type="password"
+                    placeholder="Set a temporary password"
+                    className="bg-white"
+                  />
+                  <p className="text-xs text-muted-foreground">Share this password with the borrower.</p>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -74,6 +125,17 @@ export default function CreateLoanPage() {
                 </div>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="loanName">Loan Name (Optional)</Label>
+              <Input
+                id="loanName"
+                name="loanName"
+                type="text"
+                placeholder="e.g. Home Loan, Personal Expense"
+                className="bg-white"
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                 <Label htmlFor="tenure">Tenure (Months)</Label>
@@ -97,6 +159,21 @@ export default function CreateLoanPage() {
                     required
                 />
                 </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lateFeeAmount">Late Fee per EMI (₹)</Label>
+              <Input
+                id="lateFeeAmount"
+                name="lateFeeAmount"
+                type="number"
+                placeholder="500"
+                defaultValue="500"
+                min="0"
+                step="1"
+                required
+              />
+              <p className="text-xs text-muted-foreground">This amount will be charged if an EMI is overdue.</p>
             </div>
 
             <div className="pt-4">

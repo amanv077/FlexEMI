@@ -43,15 +43,21 @@ export async function checkLateFees() {
             })
 
             if (!existingCharge) {
+              // Use loan-specific late fee amount, default to 0 if not present
+              // casting to any for safety if types aren't fully synced in IDE context yet
+              const feeAmount = (emi.loan as any).lateFeeAmount ?? 500;
+
+              if (feeAmount > 0) {
                 await prisma.charge.create({
-                    data: {
-                        amount: LATE_FEE_AMOUNT,
-                        reason: reason,
-                        date: today,
-                        loanId: emi.loanId
-                    }
-                })
-                chargesAdded++
+                  data: {
+                    amount: feeAmount,
+                    reason: reason,
+                    date: today,
+                    loanId: emi.loanId,
+                  },
+                });
+                chargesAdded++;
+              }
             }
         }
 

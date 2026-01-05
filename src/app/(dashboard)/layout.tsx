@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { signOut } from '@/auth'
-import { redirect } from 'next/navigation'
+import { LogOut } from 'lucide-react'
 
 export default function DashboardLayout({
   children,
@@ -22,7 +22,8 @@ export default function DashboardLayout({
                     'use server'
                     await signOut()
                 }}>
-                <button type="submit" className="text-sm text-muted-foreground hover:text-foreground font-medium transition-colors">
+                <button type="submit" className="text-sm text-muted-foreground hover:text-foreground font-medium transition-colors flex items-center gap-2 cursor-pointer">
+                  <LogOut className="h-4 w-4" />
                         Sign Out
                     </button>
                 </form>

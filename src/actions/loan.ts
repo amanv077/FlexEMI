@@ -13,6 +13,11 @@ const createLoanSchema = z.object({
   interestRate: z.coerce.number().min(0),
   tenure: z.coerce.number().int().positive(), // months
   startDate: z.string().date(), // YYYY-MM-DD
+  lateFeeAmount: z.coerce.number().min(0).default(500),
+  loanName: z.string().optional(),
+  createBorrower: z.string().nullable().optional(), // "on" if checked
+  borrowerName: z.string().nullable().optional(),
+  borrowerPassword: z.string().nullable().optional(),
 });
 
 export async function createLoan(
@@ -30,21 +35,66 @@ export async function createLoan(
     interestRate: formData.get("interestRate"),
     tenure: formData.get("tenure"),
     startDate: formData.get("startDate"),
+    lateFeeAmount: formData.get("lateFeeAmount"),
+    loanName: formData.get("loanName"),
+    createBorrower: formData.get("createBorrower"),
+    borrowerName: formData.get("borrowerName"),
+    borrowerPassword: formData.get("borrowerPassword"),
   });
 
   if (!validatedFields.success) {
-    return "Invalid fields";
+    console.error(
+      "Validation failed:",
+      validatedFields.error.flatten().fieldErrors
+    );
+    return `Invalid fields: ${JSON.stringify(
+      validatedFields.error.flatten().fieldErrors
+    )}`;
   }
 
-  const { borrowerEmail, amount, interestRate, tenure, startDate } =
-    validatedFields.data;
+  const {
+    borrowerEmail,
+    amount,
+    interestRate,
+    tenure,
+    startDate,
+    lateFeeAmount,
+    loanName,
+    createBorrower,
+    borrowerName,
+    borrowerPassword,
+  } = validatedFields.data;
 
-  const borrower = await prisma.user.findUnique({
+  let borrower = await prisma.user.findUnique({
     where: { email: borrowerEmail },
   });
 
-  if (!borrower) {
-    return "Borrower not found with that email.";
+  // Handle Borrower Creation logic
+  if (createBorrower === "on") {
+    if (borrower) {
+      return "User with this email already exists. Uncheck 'Create New Borrower'.";
+    }
+    if (!borrowerName || !borrowerPassword) {
+      return "Name and Password are required to create a new borrower.";
+    }
+
+    try {
+      borrower = await prisma.user.create({
+        data: {
+          email: borrowerEmail,
+          name: borrowerName,
+          password: borrowerPassword, // TODO: Hash this
+          role: "LOAN_TAKER",
+        },
+      });
+    } catch (e) {
+      console.error("Failed to create borrower:", e);
+      return "Failed to create new borrower account.";
+    }
+  } else {
+    if (!borrower) {
+      return "Borrower not found. Enable 'Create New Borrower' to sign them up.";
+    }
   }
 
   if (borrower.id === session.user.id) {
@@ -54,10 +104,12 @@ export async function createLoan(
   try {
     const loan = await prisma.loan.create({
       data: {
+        name: loanName,
         amount,
         interestRate,
         tenure,
         startDate: new Date(startDate),
+        lateFeeAmount: lateFeeAmount,
         lenderId: session.user.id,
         borrowerId: borrower.id,
         status: "ACTIVE",
@@ -120,38 +172,99 @@ export async function createLoan(
 }
 
 export async function getLenderLoans() {
-    const session = await auth()
-    if (!session?.user || session.user.role !== 'LOAN_GIVER') return []
+  const session = await auth();
+  if (!session?.user || session.user.role !== "LOAN_GIVER") return [];
 
-    const loans = await prisma.loan.findMany({
-        where: { lenderId: session.user.id },
-        include: {
-            borrower: {
-                select: { name: true, email: true }
-            },
-            emis: true // Include likely needed for progress calculation
-        },
-        orderBy: { createdAt: 'desc' }
-    })
-    return loans
+  const loans = await prisma.loan.findMany({
+    where: { lenderId: session.user.id },
+    include: {
+      borrower: {
+        select: { name: true, email: true },
+      },
+      emis: true, // Include likely needed for progress calculation
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  return loans;
 }
 
 export async function getBorrowerLoans() {
-    const session = await auth()
-    if (!session?.user || session.user.role !== 'LOAN_TAKER') return []
+  const session = await auth();
+  if (!session?.user || session.user.role !== "LOAN_TAKER") return [];
 
-    const loans = await prisma.loan.findMany({
-        where: { borrowerId: session.user.id },
-        include: {
-            lender: {
-                select: { name: true, email: true }
-            },
-            emis: {
-                orderBy: { dueDate: 'asc' }
-            }
-        },
-        orderBy: { createdAt: 'desc' }
-    })
-    return loans
+  const loans = await prisma.loan.findMany({
+    where: { borrowerId: session.user.id },
+    include: {
+      lender: {
+        select: { name: true, email: true },
+      },
+      emis: {
+        orderBy: { dueDate: "asc" },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  return loans;
 }
 
+export async function getLoanDetails(loanId: string) {
+  const session = await auth();
+  if (!session?.user) return null; // allow both roles, check ownership later
+
+  const loan = await prisma.loan.findUnique({
+    where: { id: loanId },
+    include: {
+      borrower: {
+        select: { name: true, email: true },
+      },
+      lender: {
+        select: { name: true, email: true },
+      },
+      emis: {
+        orderBy: { dueDate: "asc" },
+      },
+      charges: {
+        orderBy: { date: "desc" },
+      },
+    },
+  });
+
+  if (!loan) return null;
+
+  // Security check: User must be either the lender or the borrower
+  const isLender = loan.lenderId === session.user.id;
+  const isBorrower = loan.borrowerId === session.user.id;
+
+  if (!isLender && !isBorrower) {
+    return null;
+  }
+
+  return loan;
+}
+
+export async function toggleArchiveLoan(loanId: string) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "LOAN_GIVER")
+    return { error: "Unauthorized" };
+
+  const loan = await prisma.loan.findUnique({
+    where: { id: loanId },
+  });
+
+  if (!loan) return { error: "Loan not found" };
+  if (loan.lenderId !== session.user.id) return { error: "Unauthorized" };
+
+  try {
+    await prisma.loan.update({
+      where: { id: loanId },
+      data: { isArchived: !loan.isArchived },
+    });
+    revalidatePath("/lender");
+    revalidatePath("/borrower");
+    revalidatePath(`/lender/loans/${loanId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to toggle archive:", error);
+    return { error: "Failed to update loan" };
+  }
+}

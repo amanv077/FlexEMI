@@ -22,11 +22,14 @@ model User {
 
 model Loan {
   id           String   @id @default(cuid())
+  name         String?
   amount       Float
   interestRate Float
   tenure       Int      // in months
+  lateFeeAmount Float   @default(0)
   startDate    DateTime @default(now())
   status       String   @default("ACTIVE") // PENDING, ACTIVE, COMPLETED, DEFAULTED
+  isArchived   Boolean  @default(false)
   
   lenderId     String
   lender       User     @relation("LoanGiver", fields: [lenderId], references: [id])
