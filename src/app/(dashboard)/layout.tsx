@@ -14,7 +14,11 @@ export default function DashboardLayout({
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <Link href="/" className="text-xl font-bold text-primary tracking-tight">FlexEMI</Link>
+                <Link href="/" className="flex items-center gap-2">
+                  <div className="relative h-25 w-25">
+                    <img src="/logo.png" alt="FlexEMI Logo" className="object-contain" />
+                  </div>
+                </Link>
               </div>
             </div>
             <div className="flex items-center">

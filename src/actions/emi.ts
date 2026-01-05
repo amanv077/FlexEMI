@@ -14,9 +14,15 @@ export async function payEMI(emiId: string) {
     try {
         // 1. Verify ownership and status
         const emi = await prisma.eMI.findUnique({
-            where: { id: emiId },
-            include: { loan: true }
-        })
+          where: { id: emiId },
+          include: {
+            loan: {
+              include: {
+                lender: true,
+              },
+            },
+          },
+        });
 
         if (!emi) return { error: 'EMI not found' }
         if (emi.loan.borrowerId !== session.user.id) return { error: 'Unauthorized' }

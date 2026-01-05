@@ -3,6 +3,7 @@ import { getLoanDetails } from '@/actions/loan'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { PayEmiButton } from '@/components/pay-emi-button'
 import { ArrowLeft, Calendar, User } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -40,7 +41,7 @@ export default async function BorrowerLoanDetailsPage({ params }: { params: Prom
                 <div className="flex justify-between items-start">
                     <div className="space-y-1">
                         <CardTitle className="text-2xl font-bold text-primary">
-                             {loan.name || "Loan Details"}
+                                  {(loan as any).name || "Loan Details"}
                         </CardTitle>
                         <p className="text-sm text-muted-foreground font-mono">ID: {loan.id.slice(-8).toUpperCase()}</p>
                     </div>
@@ -130,9 +131,14 @@ export default async function BorrowerLoanDetailsPage({ params }: { params: Prom
                             ₹{emi.amount.toLocaleString()}
                         </div>
                         <div className="col-span-1">
-                             <Badge variant={emi.status === 'PAID' ? 'default' : emi.status === 'OVERDUE' ? 'destructive' : 'secondary'}>
+                            <Badge variant={emi.status === 'PAID' ? 'default' : emi.status === 'OVERDUE' ? 'destructive' : 'secondary'} className="mb-1">
                                 {emi.status}
                              </Badge>
+                            {emi.status !== 'PAID' && (
+                                <div className="mt-1">
+                                    <PayEmiButton emiId={emi.id} amount={emi.amount} />
+                                </div>
+                            )}
                         </div>
                          <div className="col-span-1 text-right text-sm text-muted-foreground hidden sm:block">
                             {emi.paidDate ? new Date(emi.paidDate).toLocaleDateString() : '-'}

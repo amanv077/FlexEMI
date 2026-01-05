@@ -259,6 +259,7 @@ export async function toggleArchiveLoan(loanId: string) {
       where: { id: loanId },
       data: { isArchived: !loan.isArchived },
     });
+    console.log(`Loan ${loanId} archive status toggled. New status: ${!loan.isArchived}`);
     revalidatePath("/lender");
     revalidatePath("/borrower");
     revalidatePath(`/lender/loans/${loanId}`);
