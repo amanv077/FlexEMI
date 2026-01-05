@@ -15,7 +15,7 @@ export default async function LenderDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Lender Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Lender Dashboard</h1>
         <Button asChild>
           <Link href="/lender/create">
             <PlusCircle className="mr-2 h-4 w-4" />
@@ -58,11 +58,11 @@ export default async function LenderDashboard() {
       </div>
 
       <div className="grid gap-4">
-        <h2 className="text-xl font-semibold text-gray-900">Recent Loans</h2>
+        <h2 className="text-xl font-semibold text-foreground">Recent Loans</h2>
         {loans.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-10">
-              <p className="text-gray-500 mb-4">You haven't created any loans yet.</p>
+              <p className="text-muted-foreground mb-4">You haven't created any loans yet.</p>
               <Button asChild variant="outline">
                 <Link href="/lender/create">Create your first loan</Link>
               </Button>
@@ -72,7 +72,7 @@ export default async function LenderDashboard() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {loans.map((loan: any) => (
               <Card key={loan.id} className="overflow-hidden">
-                <CardHeader className="bg-gray-50/50 pb-4">
+                <CardHeader className="bg-muted/50 pb-4">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">{loan.borrower.name || loan.borrower.email}</CardTitle>
                     <Badge variant={loan.status === 'ACTIVE' ? 'default' : 'secondary'}>
@@ -82,19 +82,19 @@ export default async function LenderDashboard() {
                 </CardHeader>
                 <CardContent className="pt-4 space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Amount:</span>
+                    <span className="text-muted-foreground">Amount:</span>
                     <span className="font-semibold">₹{loan.amount.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Interest:</span>
+                    <span className="text-muted-foreground">Interest:</span>
                     <span className="font-semibold">{loan.interestRate}%</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Start Date:</span>
+                    <span className="text-muted-foreground">Start Date:</span>
                     <span>{new Date(loan.startDate).toLocaleDateString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Tenure:</span>
+                    <span className="text-muted-foreground">Tenure:</span>
                     <span>{loan.tenure} months</span>
                   </div>
                 </CardContent>

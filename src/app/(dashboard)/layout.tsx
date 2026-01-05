@@ -8,13 +8,13 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200">
+    <div className="min-h-screen bg-muted/30">
+      <nav className="bg-background border-b border-border sticky top-0 z-10 backdrop-blur-xl bg-background/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <Link href="/" className="text-xl font-bold text-blue-600">FlexEMI</Link>
+                <Link href="/" className="text-xl font-bold text-primary tracking-tight">FlexEMI</Link>
               </div>
             </div>
             <div className="flex items-center">
@@ -22,7 +22,7 @@ export default function DashboardLayout({
                     'use server'
                     await signOut()
                 }}>
-                    <button type="submit" className="text-sm text-gray-700 hover:text-gray-900 font-medium">
+                <button type="submit" className="text-sm text-muted-foreground hover:text-foreground font-medium transition-colors">
                         Sign Out
                     </button>
                 </form>

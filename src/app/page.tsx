@@ -15,17 +15,17 @@ export default async function Home() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-white p-4 text-center">
-      <h1 className="text-5xl font-extrabold text-blue-600 mb-6 tracking-tight">FlexEMI</h1>
-      <p className="text-xl text-gray-600 mb-10 max-w-lg">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4 text-center">
+      <h1 className="text-5xl font-extrabold text-primary mb-6 tracking-tight">FlexEMI</h1>
+      <p className="text-xl text-muted-foreground mb-10 max-w-lg">
         The easiest way to manage loans and convert them into flexible EMIs.
         Login to manage your payments or lend money.
       </p>
       <div className="flex space-x-4">
-        <Link href="/login" className="px-8 py-3 bg-blue-600 text-white rounded-full font-bold shadow-lg hover:bg-blue-700 hover:shadow-xl transition transform hover:-translate-y-0.5">
+        <Link href="/login" className="px-8 py-3 bg-primary text-primary-foreground rounded-full font-bold shadow-lg hover:bg-primary/90 hover:shadow-xl transition transform hover:-translate-y-0.5">
           Get Started
         </Link>
-        <Link href="/login" className="px-8 py-3 bg-white text-blue-600 border border-blue-200 rounded-full font-bold shadow-sm hover:bg-blue-50 transition">
+        <Link href="/login" className="px-8 py-3 bg-secondary text-primary border border-input rounded-full font-bold shadow-sm hover:bg-secondary/80 transition">
           Sign In
         </Link>
       </div>

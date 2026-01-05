@@ -26,7 +26,7 @@ export default function CreateLoanPage() {
                 <ArrowLeft className="h-4 w-4 mr-1"/> Back
             </Link>
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Create New Loan</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Create New Loan</h1>
       </div>
 
       <Card>

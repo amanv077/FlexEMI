@@ -14,7 +14,7 @@ export default async function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Admin Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Admin Dashboard</h1>
         <CheckLateFeesButton />
       </div>
 
@@ -54,10 +54,10 @@ export default async function AdminDashboard() {
           <CardContent className="p-0">
             <div className="divide-y divide-gray-200">
               {stats.recentUsers.map((user: any) => (
-                <div key={user.id} className="flex items-center justify-between p-4">
+                <div key={user.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
                         <div>
-                          <p className="font-medium text-gray-900">{user.name || 'Unnamed'}</p>
-                          <p className="text-sm text-gray-500">{user.email}</p>
+                    <p className="font-medium text-foreground">{user.name || 'Unnamed'}</p>
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Badge variant="outline">{user.role}</Badge>
