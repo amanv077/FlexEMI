@@ -1,0 +1,66 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      String   @default("LOAN_TAKER") // Using String for SQLite simplicity or could use Enum
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  loansGiven  Loan[] @relation("LoanGiver")
+  loansTaken  Loan[] @relation("LoanTaker")
+}
+
+model Loan {
+  id           String   @id @default(cuid())
+  amount       Float
+  interestRate Float
+  tenure       Int      // in months
+  startDate    DateTime @default(now())
+  status       String   @default("ACTIVE") // PENDING, ACTIVE, COMPLETED, DEFAULTED
+  
+  lenderId     String
+  lender       User     @relation("LoanGiver", fields: [lenderId], references: [id])
+  
+  borrowerId   String
+  borrower     User     @relation("LoanTaker", fields: [borrowerId], references: [id])
+  
+  emis         EMI[]
+  charges      Charge[]
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model EMI {
+  id        String    @id @default(cuid())
+  amount    Float
+  dueDate   DateTime
+  status    String    @default("PENDING") // PENDING, PAID, OVERDUE
+  paidDate  DateTime?
+  
+  loanId    String
+  loan      Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Charge {
+  id        String   @id @default(cuid())
+  amount    Float
+  reason    String
+  date      DateTime @default(now())
+  
+  loanId    String
+  loan      Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+}
