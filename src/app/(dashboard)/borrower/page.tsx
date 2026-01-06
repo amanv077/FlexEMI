@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PayEmiButton } from '@/components/pay-emi-button'
-import { AlertCircle, Calendar } from 'lucide-react'
+import { AlertCircle, Calendar, CreditCard, Wallet, ArrowRight } from 'lucide-react'
 
 export default async function BorrowerDashboard() {
   const loans = await getBorrowerLoans()
@@ -19,33 +19,48 @@ export default async function BorrowerDashboard() {
   const nextMonthIndex = nextMonthDate.getMonth()
   const nextMonthYear = nextMonthDate.getFullYear()
 
-  let totalDueThisMonth = 0
-  let totalUpcomingNextMonth = 0 // Sum of all EMIs due next month
+  let totalOverdue = 0
+  let totalOutstanding = 0 // Total remaining for all loans
 
   const pendingEmisThisMonth: any[] = []
   const upcomingEmisNextMonth: any[] = []
 
+  const activeLoans = loans.filter((l: any) => !l.isArchived)
+  const archivedLoans = loans.filter((l: any) => l.isArchived)
+
   loans.forEach((loan: any) => {
-    if (loan.isArchived) return
+    // We count stats for ALL loans, even archived ones, so you don't miss payments.
+    // if (loan.isArchived) return
 
     loan.emis.forEach((emi: any) => {
       const dueDate = new Date(emi.dueDate)
 
-      // Due This Month or Overdue (Pay Now)
+      // Calculate Total Outstanding (all pending/overdue EMIS)
       if (emi.status !== 'PAID') {
-        // If overdue OR due in current month (and contractually pending)
-        if (emi.status === 'OVERDUE' || (dueDate.getMonth() === currentMonth && dueDate.getFullYear() === currentYear) || dueDate < now) {
-          totalDueThisMonth += emi.amount
+        totalOutstanding += emi.amount
+
+        // Overdue Calculation
+        if (emi.status === 'OVERDUE' || (dueDate < now && (dueDate.getMonth() !== currentMonth || dueDate.getFullYear() !== currentYear))) {
+          totalOverdue += emi.amount
+        }
+      }
+
+      // Grouping for "Pay This Month" (Includes Overdue + Due Current Month)
+      if (emi.status !== 'PAID') {
+        const isOverdue = emi.status === 'OVERDUE' || dueDate < now
+        const isDueThisMonth = dueDate.getMonth() === currentMonth && dueDate.getFullYear() === currentYear
+
+        if (isOverdue || isDueThisMonth) {
           pendingEmisThisMonth.push({
             ...emi,
             loanName: loan.name || `Loan from ${loan.lender.name}`,
-            lenderName: loan.lender.name
+            lenderName: loan.lender.name,
+            isOverdue: isOverdue && !isDueThisMonth
           })
         }
 
-        // Upcoming: Due specifically in NEXT MONTH
+        // "To be paid Next Month"
         if (dueDate.getMonth() === nextMonthIndex && dueDate.getFullYear() === nextMonthYear) {
-          totalUpcomingNextMonth += emi.amount
           upcomingEmisNextMonth.push({
             ...emi,
             loanName: loan.name || `Loan from ${loan.lender.name}`,
@@ -56,147 +71,239 @@ export default async function BorrowerDashboard() {
     })
   })
 
-  return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Borrower Dashboard</h1>
-        <Button asChild variant="outline">
-          <Link href="/borrower/loans">View All Loans</Link>
-        </Button>
-      </div>
+  // Helper to format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(amount)
+  }
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Main Action Card: Pay Now */}
-        <Card className={`border-l-4 ${totalDueThisMonth > 0 ? 'border-l-primary shadow-md' : 'border-l-green-500'}`}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              {totalDueThisMonth > 0 ? < AlertCircle className="h-5 w-5 text-red-500" /> : <Badge className="bg-green-100 text-green-700 hover:bg-green-200">All Caught Up</Badge>}
-              Total Due Now
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">Includes overdue and {now.toLocaleString('default', { month: 'long' })}'s EMIs</p>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold mb-4">₹{totalDueThisMonth.toLocaleString()}</div>
-            {totalDueThisMonth > 0 ? (
-              <div className="space-y-4">
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
-                  {pendingEmisThisMonth.map((emi: any) => (
-                    <div key={emi.id} className="flex items-center justify-between text-sm border p-2 rounded-md bg-muted/20">
-                      <div>
-                        <p className="font-medium">{emi.loanName}</p>
-                        <p className="text-xs text-muted-foreground">Due: {new Date(emi.dueDate).toLocaleDateString()}</p>
-                      </div>
-                      <div className="text-right flex items-center gap-2">
-                        <span className="font-bold">₹{emi.amount.toLocaleString()}</span>
-                        <div className="w-24">
-                          <PayEmiButton emiId={emi.id} amount={emi.amount} />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+  return (
+    <div className="space-y-8 max-w-5xl mx-auto pb-10">
+
+      {/* Header & Top Stats */}
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground">Overview of your loan status and payments.</p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Overdue Card */}
+          <Card className={`border-l-4 shadow-sm ${totalOverdue > 0 ? 'border-l-red-500 bg-red-50/10' : 'border-l-green-500 bg-green-50/10'}`}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Overdue (Delayed)
+              </CardTitle>
+              <AlertCircle className={`h-4 w-4 ${totalOverdue > 0 ? 'text-red-500' : 'text-green-500'}`} />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${totalOverdue > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                {formatCurrency(totalOverdue)}
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">You have no pending payments for this month. Great job!</p>
-            )}
-          </CardContent>
+              <p className="text-xs text-muted-foreground">
+                Total amount pending from past due dates
+              </p>
+            </CardContent>
           </Card>
 
-        {/* Upcoming Card */}
-        <Card className="border-l-4 border-l-blue-500/50 bg-blue-50/10">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-blue-500" />
-              Upcoming Due Next Month
-                  </CardTitle>
-            <p className="text-sm text-muted-foreground">Total payments for {nextMonthDate.toLocaleString('default', { month: 'long' })}</p>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold mb-4">₹{totalUpcomingNextMonth.toLocaleString()}</div>
-            {upcomingEmisNextMonth.length > 0 ? (
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
-                {upcomingEmisNextMonth.map((emi: any) => (
-                  <div key={emi.id} className="flex items-center justify-between text-sm border-b border-blue-200 py-2 last:border-0">
-                    <div>
-                      <p className="font-medium">{emi.loanName}</p>
+          {/* Total Remaining Card */}
+          <Card className="border-l-4 border-l-blue-500 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Outstanding
+              </CardTitle>
+              <Wallet className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {formatCurrency(totalOutstanding)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Total Principal + Interest remaining
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Section 1: Pay This Month */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-primary" />
+          Due This Month
+        </h2>
+        <Card>
+          <CardContent className="p-0">
+            {pendingEmisThisMonth.length > 0 ? (
+              <div className="divide-y">
+                {pendingEmisThisMonth.map((emi) => (
+                  <div key={emi.id} className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <p className="font-semibold text-base">{emi.loanName}</p>
+                      <div className="flex gap-2 text-xs text-muted-foreground">
+                        <span>Due: {new Date(emi.dueDate).toLocaleDateString()}</span>
+                        {emi.isOverdue && <span className="text-red-500 font-bold">• Overdue</span>}
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className="font-bold block">₹{emi.amount.toLocaleString()}</span>
-                      <span className="text-[10px] text-muted-foreground">Due {new Date(emi.dueDate).toLocaleDateString()}</span>
+                    <div className="flex items-center gap-4 w-full sm:w-auto mt-2 sm:mt-0 justify-between sm:justify-end">
+                      <span className="font-bold text-lg">{formatCurrency(emi.amount)}</span>
+                      <div className="w-32">
+                        <PayEmiButton emiId={emi.id} amount={emi.amount} />
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground">No EMIs scheduled for next month.</p>
+              <div className="p-8 text-center text-muted-foreground">
+                No payments due right now. You're all caught up!
+                </div>
             )}
           </CardContent>
         </Card>
       </div>
 
+      {/* Section 2: Upcoming Next Month */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold flex items-center gap-2 text-muted-foreground">
+          <ArrowRight className="h-5 w-5" />
+          Upcoming (Next Month)
+        </h2>
+        <Card className="bg-muted/10 border-dashed">
+          <CardContent className="p-0">
+            {upcomingEmisNextMonth.length > 0 ? (
+              <div className="divide-y">
+                {upcomingEmisNextMonth.map((emi) => (
+                  <div key={emi.id} className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 opacity-90">
+                    <div className="space-y-1">
+                      <p className="font-medium text-base">{emi.loanName}</p>
+                      <div className="text-xs text-muted-foreground">
+                        <span>Due: {new Date(emi.dueDate).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 w-full sm:w-auto mt-2 sm:mt-0 justify-between sm:justify-end">
+                      <span className="font-semibold text-lg text-muted-foreground">{formatCurrency(emi.amount)}</span>
+                      <div className="w-32">
+                        {/* Including Pay Button here too as requested */}
+                        <PayEmiButton emiId={emi.id} amount={emi.amount} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+                <div className="p-8 text-center text-muted-foreground text-sm">
+                  No payments scheduled for next month.
+                </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 3: Active Loans */}
       <div className="space-y-4 pt-4">
-        <h2 className="text-xl font-semibold text-foreground">Active Loans</h2>
-        {loans.filter((l: any) => !l.isArchived).length === 0 ? (
-          <Card>
-            <CardContent className="py-10 text-center text-muted-foreground">
-              You don't have any active loans.
-            </CardContent>
-          </Card>
+        <h2 className="text-xl font-semibold flex items-center gap-2">
+          <CreditCard className="h-5 w-5 text-primary" />
+          Active Loans
+        </h2>
+        {activeLoans.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {activeLoans.map((loan: any) => (
+              <LoanCard key={loan.id} loan={loan} />
+            ))}
+          </div>
         ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {loans.filter((l: any) => !l.isArchived).map((loan: any) => {
-                // Calculate next EMI for this specific loan
-                const nextLoanEmi = loan.emis.find((e: any) => e.status === 'PENDING')
-                return (
-                  <Link key={loan.id} href={`/borrower/loans/${loan.id}`} className="block group transition-transform active:scale-[0.99]">
-                    <Card className="group-hover:border-primary/50 group-hover:shadow-md transition-all duration-200">
-                      <CardHeader className="bg-muted/50 pb-3 pt-4">
-                        <div className="flex items-center justify-between">
-                          <div className="space-y-0.5">
-                            <CardTitle className="text-base group-hover:text-primary transition-colors">
-                              {loan.name || `Loan from ${loan.lender.name}`}
-                            </CardTitle>
-                            <p className="text-xs text-muted-foreground">Started {new Date(loan.startDate).toLocaleDateString()}</p>
-                          </div>
-                          <Badge variant="outline" className="bg-background">
-                            ₹{loan.amount.toLocaleString()}
-                          </Badge>
-                                </div>
-                      </CardHeader>
-                      <CardContent className="pt-3 pb-4 space-y-3">
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-muted-foreground">Outstanding EMI</span>
-                          {nextLoanEmi ? (
-                            <div className="text-right">
-                              <span className="font-bold block">₹{nextLoanEmi.amount.toLocaleString()}</span>
-                              <span className={`text-[10px] ${new Date(nextLoanEmi.dueDate) < now ? 'text-red-500 font-bold' : 'text-muted-foreground'}`}>
-                                Due {new Date(nextLoanEmi.dueDate).toLocaleDateString()}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-green-600 font-medium">Fully Paid</span>
-                          )}
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Progress</span>
-                            <span>{Math.round((loan.emis.filter((e: any) => e.status === 'PAID').length / loan.tenure) * 100)}%</span>
-                          </div>
-                          <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-primary transition-all duration-500"
-                              style={{ width: `${Math.round((loan.emis.filter((e: any) => e.status === 'PAID').length / loan.tenure) * 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      </CardContent>
-                        </Card>
-                  </Link>
-                )
-              })}
-            </div>
+          <div className="text-center p-8 bg-muted/20 rounded-lg text-muted-foreground">
+            No active loans found.
+          </div>
         )}
       </div>
+
+      {/* Section 4: Archived Loans (if any) */}
+      {archivedLoans.length > 0 && (
+        <div className="space-y-4 pt-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2 text-muted-foreground">
+            <CreditCard className="h-5 w-5" />
+            Archived Loans
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 opacity-75">
+            {archivedLoans.map((loan: any) => (
+              <LoanCard key={loan.id} loan={loan} isArchived />
+            ))}
+          </div>
+        </div>
+      )}
+
     </div>
+  )
+}
+
+function LoanCard({ loan, isArchived }: { loan: any, isArchived?: boolean }) {
+  // Simple helper to find next payment for card display
+  const nextEmi = loan.emis.find((e: any) => e.status === 'PENDING')
+  const paidCount = loan.emis.filter((e: any) => e.status === 'PAID').length
+  const progress = Math.round((paidCount / loan.tenure) * 100)
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(amount)
+  }
+
+  return (
+    <Link href={`/borrower/loans/${loan.id}`} className="block h-full">
+      <Card className={`h-full transition-all hover:shadow-md ${isArchived ? 'bg-muted/10' : 'hover:border-primary/50'}`}>
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-start">
+            <div className="space-y-1">
+              <CardTitle className="text-base line-clamp-1">
+                {loan.name || `Loan from ${loan.lender.name}`}
+                            </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {isArchived ? 'Archived' : `Started ${new Date(loan.startDate).toLocaleDateString()}`}
+              </p>
+            </div>
+            <Badge variant={isArchived ? "secondary" : "outline"}>
+              {formatCurrency(loan.amount)}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">Progress</span>
+            <span className="font-medium">{progress}%</span>
+          </div>
+          <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+            <div
+              className={`h-full transition-all ${isArchived ? 'bg-muted-foreground' : 'bg-primary'}`}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+
+          {!isArchived && nextEmi && (
+            <div className="pt-2 border-t mt-2 flex justify-between items-center">
+              <span className="text-xs text-muted-foreground">Next EMI</span>
+                            <div className="text-right">
+                <span className="block font-medium">{formatCurrency(nextEmi.amount)}</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {new Date(nextEmi.dueDate).toLocaleDateString()}
+                </span>
+              </div>
+                        </div>
+          )}
+
+          {!isArchived && !nextEmi && (
+            <div className="pt-2 border-t mt-2 text-center text-green-600 font-medium py-1">
+              Fully Paid
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </Link>
   )
 }

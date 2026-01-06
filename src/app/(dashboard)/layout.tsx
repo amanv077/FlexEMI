@@ -15,8 +15,9 @@ export default function DashboardLayout({
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
                 <Link href="/" className="flex items-center gap-2">
-                  <div className="relative h-25 w-25">
-                    <img src="/logo.png" alt="FlexEMI Logo" className="object-contain" />
+                  <div className="flex flex-col">
+                    <span className="font-bold text-xl tracking-tight text-primary">FlexEMI</span>
+                    <span className="text-[10px] text-muted-foreground leading-none">Smart Lending Simplified</span>
                   </div>
                 </Link>
               </div>
