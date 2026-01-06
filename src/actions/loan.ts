@@ -175,13 +175,17 @@ export async function getLenderLoans() {
   const session = await auth();
   if (!session?.user || session.user.role !== "LOAN_GIVER") return [];
 
+  // Auto-apply late fees for overdue EMIs
+  await applyLateFees(session.user.id, "LOAN_GIVER");
+
   const loans = await prisma.loan.findMany({
     where: { lenderId: session.user.id },
     include: {
       borrower: {
         select: { name: true, email: true },
       },
-      emis: true, // Include likely needed for progress calculation
+      emis: true,
+      charges: true,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -192,6 +196,9 @@ export async function getBorrowerLoans() {
   const session = await auth();
   if (!session?.user || session.user.role !== "LOAN_TAKER") return [];
 
+  // Auto-apply late fees for overdue EMIs (triggered by borrower viewing dashboard)
+  await applyLateFees(session.user.id, "LOAN_TAKER");
+
   const loans = await prisma.loan.findMany({
     where: { borrowerId: session.user.id },
     include: {
@@ -201,15 +208,92 @@ export async function getBorrowerLoans() {
       emis: {
         orderBy: { dueDate: "asc" },
       },
+      charges: true,
     },
     orderBy: { createdAt: "desc" },
   });
   return loans;
 }
 
+// Helper to auto-apply late fees and mark overdue EMIs
+async function applyLateFees(userId: string, role: string) {
+  try {
+    const today = new Date();
+    const startOfToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+
+    // Find loans owned by this user
+    const loans = await prisma.loan.findMany({
+      where:
+        role === "LOAN_GIVER"
+          ? { lenderId: userId, isArchived: false }
+          : { borrowerId: userId, isArchived: false },
+      include: {
+        emis: true,
+        charges: true,
+      },
+    });
+
+    for (const loan of loans) {
+      for (const emi of loan.emis) {
+        const dueDate = new Date(emi.dueDate);
+
+        // Check if EMI is overdue (past due date and not paid/awaiting approval)
+        if (
+          emi.status !== "PAID" &&
+          emi.status !== "AWAITING_APPROVAL" &&
+          emi.status !== "OVERDUE" &&
+          dueDate < startOfToday
+        ) {
+          // Mark EMI as OVERDUE
+          await prisma.eMI.update({
+            where: { id: emi.id },
+            data: { status: "OVERDUE" },
+          });
+        }
+
+        // Apply late fee if overdue and loan has late fee configured
+        if (
+          (emi.status === "OVERDUE" ||
+            (emi.status === "PENDING" && dueDate < startOfToday)) &&
+          loan.lateFeeAmount > 0
+        ) {
+          const reason = `Late Fee for EMI due on ${dueDate.toLocaleDateString()}`;
+
+          // Check if charge already exists
+          const existingCharge = loan.charges.find(
+            (c: any) => c.reason === reason
+          );
+
+          if (!existingCharge) {
+            await prisma.charge.create({
+              data: {
+                amount: loan.lateFeeAmount,
+                reason: reason,
+                date: today,
+                loanId: loan.id,
+              },
+            });
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Auto late fee error:", error);
+  }
+}
+
 export async function getLoanDetails(loanId: string) {
   const session = await auth();
   if (!session?.user) return null; // allow both roles, check ownership later
+
+  // First, apply late fees if user is the lender
+  if (session.user.role === "LOAN_GIVER") {
+    await applyLateFees(session.user.id, "LOAN_GIVER");
+  }
 
   const loan = await prisma.loan.findUnique({
     where: { id: loanId },

@@ -1,31 +1,31 @@
 'use client'
 
-import { useTransition } from 'react'
-import { payEMI } from '@/actions/emi'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { PaymentModal } from '@/components/payment-modal'
 
 export function PayEmiButton({ emiId, amount }: { emiId: string, amount: number }) {
-  const [isPending, startTransition] = useTransition()
-
-  const handlePayment = () => {
-    if (!confirm(`Are you sure you want to pay ₹${amount.toLocaleString()}?`)) return
-
-    startTransition(async () => {
-        const result = await payEMI(emiId)
-        if (result.error) {
-            alert(result.error)
-        }
-    })
-  }
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   return (
-    <Button 
+    <>
+      <Button 
         size="sm" 
         className="w-full" 
-        onClick={handlePayment} 
-        disabled={isPending}
-    >
-        {isPending ? 'Processing...' : 'Pay Now'}
-    </Button>
+        onClick={() => setIsModalOpen(true)}
+      >
+        Pay Now
+      </Button>
+
+      <PaymentModal
+        emiId={emiId}
+        amount={amount}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={() => {
+          // Payment submitted for approval
+        }}
+      />
+    </>
   )
 }

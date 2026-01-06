@@ -122,29 +122,52 @@ export default async function BorrowerLoanDetailsPage({ params }: { params: Prom
                 <div className="col-span-1 text-right hidden sm:block">Paid On</div>
             </div>
             <div className="divide-y">
-                {loan.emis.map((emi: any) => (
-                    <div key={emi.id} className="grid grid-cols-3 sm:grid-cols-4 p-4 items-center hover:bg-muted/20 transition-colors">
-                        <div className="col-span-1 font-medium">
-                            {new Date(emi.dueDate).toLocaleDateString()}
+                      {loan.emis.map((emi: any) => {
+                          const dueDate = new Date(emi.dueDate)
+                          const startOfToday = new Date()
+                          startOfToday.setHours(0, 0, 0, 0)
+                          const isOverdue = emi.status !== 'PAID' && emi.status !== 'AWAITING_APPROVAL' && dueDate < startOfToday
+
+                          // Find late fee for this EMI
+                          let lateFee = 0
+                          if (isOverdue && loan.charges) {
+                              const charge = loan.charges.find((c: any) =>
+                                  c.reason === `Late Fee for EMI due on ${dueDate.toLocaleDateString()}`
+                              )
+                              if (charge) lateFee = charge.amount
+                          }
+                          const totalAmount = emi.amount + lateFee
+
+                          return (
+                              <div key={emi.id} className="grid grid-cols-3 sm:grid-cols-4 p-4 items-center hover:bg-muted/20 transition-colors">
+                                  <div className="col-span-1 font-medium">
+                                {dueDate.toLocaleDateString()}
+                            </div>
+                            <div className="col-span-1">
+                                <span>₹{totalAmount.toLocaleString()}</span>
+                                {lateFee > 0 && (
+                                    <p className="text-[10px] text-red-500">incl. ₹{lateFee} late fee</p>
+                                )}
+                            </div>
+                            <div className="col-span-1">
+                                <Badge variant={emi.status === 'PAID' ? 'default' : emi.status === 'OVERDUE' ? 'destructive' : 'secondary'} className="mb-1">
+                                    {emi.status}
+                                </Badge>
+                                {emi.status !== 'PAID' && emi.status !== 'AWAITING_APPROVAL' && (
+                                    <div className="mt-1">
+                                        <PayEmiButton emiId={emi.id} amount={totalAmount} />
+                                    </div>
+                                )}
+                                {emi.status === 'AWAITING_APPROVAL' && (
+                                    <p className="text-[10px] text-orange-600 mt-1">Awaiting Approval</p>
+                                )}
+                            </div>
+                            <div className="col-span-1 text-right text-sm text-muted-foreground hidden sm:block">
+                                {emi.paidDate ? new Date(emi.paidDate).toLocaleDateString() : '-'}
+                            </div>
                         </div>
-                        <div className="col-span-1">
-                            ₹{emi.amount.toLocaleString()}
-                        </div>
-                        <div className="col-span-1">
-                            <Badge variant={emi.status === 'PAID' ? 'default' : emi.status === 'OVERDUE' ? 'destructive' : 'secondary'} className="mb-1">
-                                {emi.status}
-                             </Badge>
-                            {emi.status !== 'PAID' && (
-                                <div className="mt-1">
-                                    <PayEmiButton emiId={emi.id} amount={emi.amount} />
-                                </div>
-                            )}
-                        </div>
-                         <div className="col-span-1 text-right text-sm text-muted-foreground hidden sm:block">
-                            {emi.paidDate ? new Date(emi.paidDate).toLocaleDateString() : '-'}
-                        </div>
-                    </div>
-                ))}
+                    )
+                })}
             </div>
          </div>
       </div>

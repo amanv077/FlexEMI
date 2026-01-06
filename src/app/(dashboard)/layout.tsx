@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { signOut } from '@/auth'
-import { LogOut } from 'lucide-react'
 
 export default function DashboardLayout({
   children,
@@ -14,7 +13,7 @@ export default function DashboardLayout({
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <Link href="/" className="flex items-center gap-2">
+                <Link href="/" className="flex items-center gap-2 cursor-pointer">
                   <div className="flex flex-col">
                     <span className="font-bold text-xl tracking-tight text-primary">FlexEMI</span>
                     <span className="text-[10px] text-muted-foreground leading-none">Smart Lending Simplified</span>
@@ -27,10 +26,12 @@ export default function DashboardLayout({
                     'use server'
                     await signOut()
                 }}>
-                <button type="submit" className="text-sm text-muted-foreground hover:text-foreground font-medium transition-colors flex items-center gap-2 cursor-pointer">
-                  <LogOut className="h-4 w-4" />
-                        Sign Out
-                    </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 text-sm font-medium border border-border text-foreground/70 hover:text-foreground hover:border-foreground/40 rounded-full transition-all cursor-pointer"
+                >
+                  Log out
+                </button>
                 </form>
             </div>
           </div>

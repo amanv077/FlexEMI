@@ -1,11 +1,13 @@
 
-import { getLoanDetails, toggleArchiveLoan } from '@/actions/loan'
+import { getLoanDetails } from '@/actions/loan'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, User, Calendar, AlertCircle, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { MarkUnpaidButton } from '@/components/mark-unpaid-button'
+import { ArchiveLoanButton } from '@/components/archive-loan-button'
 
 export default async function LoanDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -46,19 +48,7 @@ export default async function LoanDetailsPage({ params }: { params: Promise<{ id
                                   {loan.status}
                               </Badge>
                               {/* Archive Action */}
-                              <form action={async () => {
-                                  'use server'
-                                  await toggleArchiveLoan(loan.id)
-                              }}>
-                                  <Button
-                                      type="submit"
-                                      variant={loan.isArchived ? "secondary" : "outline"}
-                                      size="sm"
-                                      className={loan.isArchived ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-none" : ""}
-                                  >
-                                      {loan.isArchived ? "Archived" : "Archive"}
-                                  </Button>
-                              </form>
+                              <ArchiveLoanButton loanId={loan.id} isArchived={loan.isArchived} />
                           </div>
                 </div>
             </CardHeader>
@@ -132,41 +122,71 @@ export default async function LoanDetailsPage({ params }: { params: Promise<{ id
          </h2>
          
          <div className="border rounded-xl bg-white overflow-hidden shadow-sm">
-            <div className="grid grid-cols-4 bg-muted/50 p-3 text-sm font-medium text-muted-foreground">
+                  <div className="grid grid-cols-5 bg-muted/50 p-3 text-sm font-medium text-muted-foreground">
                 <div className="col-span-1">Due Date</div>
                 <div className="col-span-1">Amount</div>
                 <div className="col-span-1">Status</div>
-                <div className="col-span-1 text-right">Payment Date</div>
+                      <div className="col-span-1">Payment Date</div>
+                      <div className="col-span-1 text-right">Actions</div>
             </div>
             <div className="divide-y">
-                {loan.emis.map((emi: any) => (
-                    <div key={emi.id} className="grid grid-cols-4 p-4 items-center hover:bg-muted/20 transition-colors">
-                        <div className="col-span-1 font-medium">
-                            {new Date(emi.dueDate).toLocaleDateString()}
-                        </div>
-                        <div className="col-span-1">
-                            ₹{emi.amount.toLocaleString()}
-                        </div>
-                        <div className="col-span-1">
-                            {emi.status === 'PAID' ? (
-                                <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none shadow-none">
-                                    <CheckCircle2 className="w-3 h-3 mr-1"/> Paid
-                                </Badge>
-                            ) : new Date(emi.dueDate) < new Date() && emi.status !== 'PAID' ? (
-                                 <Badge variant="destructive" className="shadow-none">
-                                    Overdue
-                                </Badge>
-                            ) : (
-                                <Badge variant="secondary" className="text-muted-foreground bg-gray-100 shadow-none">
-                                    Pending
-                                </Badge>
-                            )}
-                        </div>
-                         <div className="col-span-1 text-right text-sm text-muted-foreground">
-                            {emi.paidDate ? new Date(emi.paidDate).toLocaleDateString() : '-'}
-                        </div>
-                    </div>
-                ))}
+                      {loan.emis.map((emi: any) => {
+                          const dueDate = new Date(emi.dueDate)
+                          const startOfToday = new Date()
+                          startOfToday.setHours(0, 0, 0, 0)
+                          const isOverdue = emi.status !== 'PAID' && emi.status !== 'AWAITING_APPROVAL' && dueDate < startOfToday
+
+                          // Find late fee for this EMI (check for ALL EMIs, not just overdue)
+                          let lateFee = 0
+                          if (loan.charges) {
+                              const charge = loan.charges.find((c: any) =>
+                                  c.reason === `Late Fee for EMI due on ${dueDate.toLocaleDateString()}`
+                              )
+                              if (charge) lateFee = charge.amount
+                          }
+                          const totalAmount = emi.amount + lateFee
+
+                          return (
+                              <div key={emi.id} className="grid grid-cols-5 p-4 items-center hover:bg-muted/20 transition-colors">
+                                  <div className="col-span-1 font-medium">
+                                      {dueDate.toLocaleDateString()}
+                                  </div>
+                                  <div className="col-span-1">
+                                      <span>₹{totalAmount.toLocaleString()}</span>
+                                      {lateFee > 0 && (
+                                          <p className="text-[10px] text-red-500">incl. ₹{lateFee} late fee</p>
+                                      )}
+                                  </div>
+                                  <div className="col-span-1">
+                                      {emi.status === 'PAID' ? (
+                                          <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none shadow-none">
+                                              <CheckCircle2 className="w-3 h-3 mr-1" /> Paid
+                                          </Badge>
+                                      ) : emi.status === 'AWAITING_APPROVAL' ? (
+                                          <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-none shadow-none">
+                                              Awaiting
+                                          </Badge>
+                                      ) : isOverdue ? (
+                                          <Badge variant="destructive" className="shadow-none">
+                                              Overdue
+                                          </Badge>
+                                      ) : (
+                                          <Badge variant="secondary" className="text-muted-foreground bg-gray-100 shadow-none">
+                                              Pending
+                                          </Badge>
+                                      )}
+                                  </div>
+                                  <div className="col-span-1 text-sm text-muted-foreground">
+                                      {emi.paidDate ? new Date(emi.paidDate).toLocaleDateString() : '-'}
+                                  </div>
+                                  <div className="col-span-1 text-right">
+                                      {emi.status === 'PAID' && (
+                                          <MarkUnpaidButton emiId={emi.id} />
+                                      )}
+                                  </div>
+                              </div>
+                          )
+                      })}
             </div>
          </div>
       </div>

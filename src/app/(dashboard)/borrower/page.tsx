@@ -29,18 +29,27 @@ export default async function BorrowerDashboard() {
   const archivedLoans = loans.filter((l: any) => l.isArchived)
 
   loans.forEach((loan: any) => {
-    // We count stats for ALL loans, even archived ones, so you don't miss payments.
-    // if (loan.isArchived) return
+    // Skip archived loans - they are only for history viewing
+    if (loan.isArchived) return
+
+    // Add late fees (charges) to outstanding and overdue
+    if (loan.charges) {
+      loan.charges.forEach((charge: any) => {
+        totalOutstanding += charge.amount
+        totalOverdue += charge.amount
+      })
+    }
 
     loan.emis.forEach((emi: any) => {
       const dueDate = new Date(emi.dueDate)
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
       // Calculate Total Outstanding (all pending/overdue EMIS)
       if (emi.status !== 'PAID') {
         totalOutstanding += emi.amount
 
-        // Overdue Calculation
-        if (emi.status === 'OVERDUE' || (dueDate < now && (dueDate.getMonth() !== currentMonth || dueDate.getFullYear() !== currentYear))) {
+        // Overdue Calculation: Status is OVERDUE OR due date is past today
+        if (emi.status === 'OVERDUE' || dueDate < startOfToday) {
           totalOverdue += emi.amount
         }
       }
@@ -51,11 +60,24 @@ export default async function BorrowerDashboard() {
         const isDueThisMonth = dueDate.getMonth() === currentMonth && dueDate.getFullYear() === currentYear
 
         if (isOverdue || isDueThisMonth) {
+          // Calculate late fee for this specific EMI if overdue
+          let lateFeeForEmi = 0
+          if (isOverdue && loan.charges) {
+            const emiLateFee = loan.charges.find((c: any) =>
+              c.reason === `Late Fee for EMI due on ${dueDate.toLocaleDateString()}`
+            )
+            if (emiLateFee) {
+              lateFeeForEmi = emiLateFee.amount
+            }
+          }
+
           pendingEmisThisMonth.push({
             ...emi,
             loanName: loan.name || `Loan from ${loan.lender.name}`,
             lenderName: loan.lender.name,
-            isOverdue: isOverdue && !isDueThisMonth
+            isOverdue: isOverdue && !isDueThisMonth,
+            lateFee: lateFeeForEmi,
+            totalAmount: emi.amount + lateFeeForEmi
           })
         }
 
@@ -146,12 +168,24 @@ export default async function BorrowerDashboard() {
                       <div className="flex gap-2 text-xs text-muted-foreground">
                         <span>Due: {new Date(emi.dueDate).toLocaleDateString()}</span>
                         {emi.isOverdue && <span className="text-red-500 font-bold">• Overdue</span>}
+                        {emi.lateFee > 0 && <span className="text-red-500">+ ₹{emi.lateFee} late fee</span>}
                       </div>
                     </div>
                     <div className="flex items-center gap-4 w-full sm:w-auto mt-2 sm:mt-0 justify-between sm:justify-end">
-                      <span className="font-bold text-lg">{formatCurrency(emi.amount)}</span>
-                      <div className="w-32">
-                        <PayEmiButton emiId={emi.id} amount={emi.amount} />
+                      <div className="text-right">
+                        <span className="font-bold text-lg">{formatCurrency(emi.totalAmount || emi.amount)}</span>
+                        {emi.lateFee > 0 && (
+                          <p className="text-[10px] text-muted-foreground">incl. late fee</p>
+                        )}
+                      </div>
+                      <div className="w-40">
+                        {emi.status === 'AWAITING_APPROVAL' ? (
+                          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 w-full justify-center py-1">
+                            Awaiting Approval
+                          </Badge>
+                        ) : (
+                          <PayEmiButton emiId={emi.id} amount={emi.totalAmount || emi.amount} />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -186,9 +220,14 @@ export default async function BorrowerDashboard() {
                     </div>
                     <div className="flex items-center gap-4 w-full sm:w-auto mt-2 sm:mt-0 justify-between sm:justify-end">
                       <span className="font-semibold text-lg text-muted-foreground">{formatCurrency(emi.amount)}</span>
-                      <div className="w-32">
-                        {/* Including Pay Button here too as requested */}
-                        <PayEmiButton emiId={emi.id} amount={emi.amount} />
+                      <div className="w-40">
+                        {emi.status === 'AWAITING_APPROVAL' ? (
+                          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 w-full justify-center py-1">
+                            Awaiting Approval
+                          </Badge>
+                        ) : (
+                          <PayEmiButton emiId={emi.id} amount={emi.amount} />
+                        )}
                       </div>
                     </div>
                   </div>
